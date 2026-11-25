@@ -2,11 +2,8 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { BLOG_ARTICLES } from './src/data/blogArticles.ts';
-import { CALCULATORS } from './src/data/calculatorsMeta.ts';
-import { CATEGORIES } from './src/data/categories.ts';
-import { SEO_LANDING_PAGES } from './src/data/seoLandingPages.ts';
 import { resolveRouteSeo } from './src/lib/seo.ts';
+import { buildRobotsTxt, buildSitemapXml } from './src/lib/sitemap.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,11 +17,19 @@ function escapeAttr(str: string): string {
 }
 
 function getBaseUrl(req: express.Request): string {
+  if (process.env.SITE_URL) {
+    return process.env.SITE_URL.replace(/\/+$/, '');
+  }
+  const forwardedHost = req.headers['x-forwarded-host'];
+  if (forwardedHost) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    return `${proto}://${Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost}`;
+  }
   if (process.env.APP_URL && process.env.APP_URL !== 'MY_APP_URL') {
     return process.env.APP_URL.replace(/\/+$/, '');
   }
-  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+  const proto = req.protocol || 'http';
+  const host = req.headers.host || 'localhost:3000';
   return `${proto}://${host}`;
 }
 
@@ -78,62 +83,29 @@ async function startServer() {
   const port = Number(process.env.PORT || 3000);
   const isProd = process.env.NODE_ENV === 'production';
 
-  // Robots.txt
+  // Special route for /robots.txt BEFORE serving HTML pages
   app.get('/robots.txt', (req, res) => {
     const baseUrl = getBaseUrl(req);
-    res.type('text/plain').send(
-      [
-        'User-agent: *',
-        'Allow: /',
-        '',
-        `Sitemap: ${baseUrl}/sitemap.xml`,
-      ].join('\n')
-    );
+    res
+      .status(200)
+      .set({
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+      })
+      .send(buildRobotsTxt(baseUrl));
   });
 
-  // Dynamic XML Sitemap covering core pages, categories, calculators, blog articles, and all 100 SEO landing pages
+  // Special route for /sitemap.xml BEFORE serving HTML pages
   app.get('/sitemap.xml', (req, res) => {
     const baseUrl = getBaseUrl(req);
-    const today = new Date().toISOString().split('T')[0];
-
-    const urls: { loc: string; priority: string; changefreq: string }[] = [
-      { loc: `${baseUrl}/`, priority: '1.0', changefreq: 'weekly' },
-      { loc: `${baseUrl}/tools`, priority: '0.9', changefreq: 'weekly' },
-      { loc: `${baseUrl}/blog`, priority: '0.8', changefreq: 'weekly' },
-      { loc: `${baseUrl}/partners`, priority: '0.7', changefreq: 'monthly' },
-      ...CATEGORIES.map((c) => ({
-        loc: `${baseUrl}/${c.slug}`,
-        priority: '0.9',
-        changefreq: 'weekly',
-      })),
-      ...CALCULATORS.map((c) => ({
-        loc: `${baseUrl}/calculators/${c.slug}`,
-        priority: '0.95',
-        changefreq: 'weekly',
-      })),
-      ...BLOG_ARTICLES.map((a) => ({
-        loc: `${baseUrl}/blog/${a.slug}`,
-        priority: '0.8',
-        changefreq: 'monthly',
-      })),
-      ...SEO_LANDING_PAGES.map((p) => ({
-        loc: `${baseUrl}/tools/${p.slug}`,
-        priority: '0.85',
-        changefreq: 'monthly',
-      })),
-    ];
-
-    const xml = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-      ...urls.map(
-        (u) =>
-          `  <url><loc>${escapeAttr(u.loc)}</loc><lastmod>${today}</lastmod><changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`
-      ),
-      '</urlset>',
-    ].join('\n');
-
-    res.type('application/xml').send(xml);
+    const sitemap = buildSitemapXml(baseUrl);
+    res
+      .status(200)
+      .set({
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+      })
+      .send(sitemap);
   });
 
   if (!isProd) {

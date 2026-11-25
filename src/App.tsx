@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { PartnersPage } from './pages/PartnersPage';
 import { SeoLandingPageView } from './pages/SeoLandingPageView';
 import { ToolsDirectoryPage } from './pages/ToolsDirectoryPage';
+import { CALCULATOR_ALIAS_PATHS } from './lib/sitemap';
 import type { CategorySlug } from './types/finance';
 
 function PageView() {
@@ -17,6 +18,10 @@ function PageView() {
 
   if (clean === '/') {
     return <HomePage />;
+  }
+
+  if (CALCULATOR_ALIAS_PATHS[clean]) {
+    return <CalculatorPage slug={CALCULATOR_ALIAS_PATHS[clean]} />;
   }
 
   const possibleCat = clean.slice(1) as CategorySlug;

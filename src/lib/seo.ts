@@ -102,6 +102,36 @@ export function resolveRouteSeo(pathname: string, baseUrl = 'https://finance.too
     };
   }
 
+  // Top-level calculator aliases (e.g. /compound-interest-calculator)
+  const aliasCalcMap: Record<string, string> = {
+    '/compound-interest-calculator': 'compound-interest',
+    '/fire-calculator': 'fire',
+    '/retirement-calculator': 'retirement',
+    '/mortgage-calculator': 'mortgage',
+    '/loan-calculator': 'loan',
+    '/roi-calculator': 'roi',
+  };
+  const aliasSlug = aliasCalcMap[cleanPath];
+  if (aliasSlug && CALCULATOR_MAP[aliasSlug as keyof typeof CALCULATOR_MAP]) {
+    const calc = CALCULATOR_MAP[aliasSlug as keyof typeof CALCULATOR_MAP];
+    const cat = CATEGORY_MAP[calc.category];
+    return {
+      title: calc.metaTitle,
+      description: calc.metaDescription,
+      canonicalPath: cleanPath,
+      ogType: 'website',
+      schemas: [
+        buildWebAppSchema(baseUrl, calc.name, calc.metaDescription, cleanPath),
+        buildBreadcrumbSchema(baseUrl, [
+          { name: 'Home', path: '/' },
+          { name: cat.shortName, path: `/${cat.slug}` },
+          { name: calc.name, path: cleanPath },
+        ]),
+        buildFaqSchema(calc.faqs),
+      ],
+    };
+  }
+
   // Core Calculators: /calculators/:slug
   if (cleanPath.startsWith('/calculators/')) {
     const slug = cleanPath.replace('/calculators/', '');
