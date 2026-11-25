@@ -1,0 +1,8 @@
+{
+  "name": "Finance.Tools",
+  "description": "Precision financial calculators, wealth projections, and editorial guides for compound interest, FIRE, retirement, mortgages, loans, and ROI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
