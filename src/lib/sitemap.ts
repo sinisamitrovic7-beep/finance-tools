@@ -11,18 +11,9 @@ function escapeXml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export const CALCULATOR_ALIAS_PATHS: Record<string, string> = {
-  '/compound-interest-calculator': 'compound-interest',
-  '/fire-calculator': 'fire',
-  '/retirement-calculator': 'retirement',
-  '/mortgage-calculator': 'mortgage',
-  '/loan-calculator': 'loan',
-  '/roi-calculator': 'roi',
-};
-
 export function buildSitemapXml(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/+$/, '');
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().slice(0, 10);
 
   const urls: { loc: string; priority: string; changefreq: string }[] = [
     {
@@ -45,12 +36,6 @@ export function buildSitemapXml(baseUrl: string): string {
       priority: '0.7',
       changefreq: 'monthly',
     },
-
-    ...Object.keys(CALCULATOR_ALIAS_PATHS).map((aliasPath) => ({
-      loc: `${cleanBase}${aliasPath}`,
-      priority: '0.95',
-      changefreq: 'weekly',
-    })),
 
     ...CATEGORIES.map((category) => ({
       loc: `${cleanBase}/${category.slug}`,
@@ -77,7 +62,6 @@ export function buildSitemapXml(baseUrl: string): string {
     })),
   ];
 
-  // Odstrani morebitne podvojene URL-je
   const uniqueUrls = Array.from(
     new Map(urls.map((url) => [url.loc, url])).values()
   );
