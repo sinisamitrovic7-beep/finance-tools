@@ -25,43 +25,73 @@ export function buildSitemapXml(baseUrl: string): string {
   const today = new Date().toISOString().split('T')[0];
 
   const urls: { loc: string; priority: string; changefreq: string }[] = [
-    { loc: `${cleanBase}/`, priority: '1.0', changefreq: 'weekly' },
-    { loc: `${cleanBase}/tools`, priority: '0.9', changefreq: 'weekly' },
-    { loc: `${cleanBase}/blog`, priority: '0.8', changefreq: 'weekly' },
-    { loc: `${cleanBase}/partners`, priority: '0.7', changefreq: 'monthly' },
+    {
+      loc: `${cleanBase}/`,
+      priority: '1.0',
+      changefreq: 'weekly',
+    },
+    {
+      loc: `${cleanBase}/tools`,
+      priority: '0.9',
+      changefreq: 'weekly',
+    },
+    {
+      loc: `${cleanBase}/blog`,
+      priority: '0.8',
+      changefreq: 'weekly',
+    },
+    {
+      loc: `${cleanBase}/partners`,
+      priority: '0.7',
+      changefreq: 'monthly',
+    },
+
     ...Object.keys(CALCULATOR_ALIAS_PATHS).map((aliasPath) => ({
       loc: `${cleanBase}${aliasPath}`,
       priority: '0.95',
       changefreq: 'weekly',
     })),
-    ...CATEGORIES.map((c) => ({
-      loc: `${cleanBase}/${c.slug}`,
+
+    ...CATEGORIES.map((category) => ({
+      loc: `${cleanBase}/${category.slug}`,
       priority: '0.9',
       changefreq: 'weekly',
     })),
-    ...CALCULATORS.map((c) => ({
-      loc: `${cleanBase}/calculators/${c.slug}`,
+
+    ...CALCULATORS.map((calculator) => ({
+      loc: `${cleanBase}/calculators/${calculator.slug}`,
       priority: '0.95',
       changefreq: 'weekly',
     })),
-    ...BLOG_ARTICLES.map((a) => ({
-      loc: `${cleanBase}/blog/${a.slug}`,
+
+    ...BLOG_ARTICLES.map((article) => ({
+      loc: `${cleanBase}/blog/${article.slug}`,
       priority: '0.8',
       changefreq: 'monthly',
     })),
-    ...SEO_LANDING_PAGES.map((p) => ({
-      loc: `${cleanBase}/tools/${p.slug}`,
+
+    ...SEO_LANDING_PAGES.map((page) => ({
+      loc: `${cleanBase}/tools/${page.slug}`,
       priority: '0.85',
       changefreq: 'monthly',
     })),
   ];
 
+  // Odstrani morebitne podvojene URL-je
+  const uniqueUrls = Array.from(
+    new Map(urls.map((url) => [url.loc, url])).values()
+  );
+
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...urls.map(
-      (u) =>
-        `  <url>\n    <loc>${escapeXml(u.loc)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`
+    ...uniqueUrls.map(
+      (url) => `  <url>
+    <loc>${escapeXml(url.loc)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`
     ),
     '</urlset>',
   ].join('\n');
@@ -69,5 +99,11 @@ export function buildSitemapXml(baseUrl: string): string {
 
 export function buildRobotsTxt(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/+$/, '');
-  return ['User-agent: *', 'Allow: /', '', `Sitemap: ${cleanBase}/sitemap.xml`].join('\n');
+
+  return [
+    'User-agent: *',
+    'Allow: /',
+    '',
+    `Sitemap: ${cleanBase}/sitemap.xml`,
+  ].join('\n');
 }
