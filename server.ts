@@ -114,7 +114,23 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'custom',
     });
+app.get('/sitemap.xml', (req, res) => {
+  res
+    .status(200)
+    .set({
+      'Content-Type': 'application/xml'
+    })
+    .send(buildSitemapXml());
+});
 
+app.get('/robots.txt', (req, res) => {
+  res
+    .status(200)
+    .set({
+      'Content-Type': 'text/plain'
+    })
+    .send(buildRobotsTxt());
+});
     app.use(vite.middlewares);
 
     app.use('*', async (req, res, next) => {
