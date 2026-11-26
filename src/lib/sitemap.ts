@@ -11,13 +11,14 @@ function escapeXml(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
+// Potreben zaradi App.tsx
 export const CALCULATOR_ALIAS_PATHS: Record<string, string> = {};
 
 export function buildSitemapXml(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/+$/, '');
   const today = new Date().toISOString().slice(0, 10);
 
-  const urls: { loc: string; priority: string; changefreq: string }[] = [
+  const urls = [
     {
       loc: `${cleanBase}/`,
       priority: '1.0',
@@ -65,22 +66,25 @@ export function buildSitemapXml(baseUrl: string): string {
   ];
 
   const uniqueUrls = Array.from(
-    new Map(urls.map((url) => [url.loc, url])).values()
+    new Map(urls.map((u) => [u.loc, u])).values()
   );
 
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...uniqueUrls.map(
-      (url) => `  <url>
+  const urlsXml = uniqueUrls
+    .map(
+      (url) => `
+  <url>
     <loc>${escapeXml(url.loc)}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>
   </url>`
-    ),
-    '</urlset>',
-  ].join('\n');
+    )
+    .join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlsXml}
+</urlset>`;
 }
 
 export function buildRobotsTxt(baseUrl: string): string {
