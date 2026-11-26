@@ -96,17 +96,14 @@ async function startServer() {
   });
 
   // Special route for /sitemap.xml BEFORE serving HTML pages
-  app.get('/sitemap.xml', (req, res) => {
-    const baseUrl = getBaseUrl(req);
-    const sitemap = buildSitemapXml(baseUrl);
-    res
-      .status(200)
-      .set({
-        'Content-Type': 'application/xml; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600',
-      })
-      .send(sitemap);
-  });
+app.get('/sitemap.xml', (req, res) => {
+  const baseUrl = getBaseUrl(req);
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+
+  return res.send(buildSitemapXml(baseUrl));
+});
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
