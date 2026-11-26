@@ -4,7 +4,7 @@ import { CATEGORIES } from '../data/categories.ts';
 import { SEO_LANDING_PAGES } from '../data/seoLandingPages.ts';
 
 function escapeXml(str: string): string {
-  return str
+ return str
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '<;')
