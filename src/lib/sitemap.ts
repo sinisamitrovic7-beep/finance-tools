@@ -7,8 +7,8 @@ function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/</g, '<;')
+    .replace(/>/g, '>;');
 }
 
 // Potreben zaradi App.tsx
