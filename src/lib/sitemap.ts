@@ -4,14 +4,13 @@ import { CATEGORIES } from '../data/categories.ts';
 import { SEO_LANDING_PAGES } from '../data/seoLandingPages.ts';
 
 function escapeXml(str: string): string {
- return str
+  return str
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
-    .replace(/</g, '<;')
-    .replace(/>/g, '>;');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
-// Potreben zaradi App.tsx
 export const CALCULATOR_ALIAS_PATHS: Record<string, string> = {};
 
 export function buildSitemapXml(baseUrl: string): string {
