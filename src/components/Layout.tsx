@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { CALCULATORS } from '../data/calculatorsMeta';
 import { CATEGORIES } from '../data/categories';
@@ -37,51 +38,16 @@ export function Layout({ children }: LayoutProps) {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Sync document head metadata & JSON-LD schemas on client route transitions
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://finance.tools';
+  const seo = useMemo(() => resolveRouteSeo(pathname, origin), [pathname, origin]);
+  const canonicalUrl = `${origin}${seo.canonicalPath}`;
+
+  // Clean up SSR-injected JSON-LD scripts once Helmet mounts on the client
   useEffect(() => {
-    const origin = window.location.origin;
-    const seo = resolveRouteSeo(pathname, origin);
-    document.title = seo.title;
-
-    const setMeta = (selector: string, attrName: string, attrVal: string, content: string) => {
-      let el = document.head.querySelector(selector) as HTMLMetaElement | null;
-      if (!el) {
-        el = document.createElement('meta');
-        el.setAttribute(attrName, attrVal);
-        document.head.appendChild(el);
-      }
-      el.setAttribute('content', content);
-    };
-
-    setMeta('meta[name="description"]', 'name', 'description', seo.description);
-    setMeta('meta[property="og:title"]', 'property', 'og:title', seo.title);
-    setMeta('meta[property="og:description"]', 'property', 'og:description', seo.description);
-    setMeta('meta[property="og:type"]', 'property', 'og:type', seo.ogType);
-    setMeta('meta[property="og:url"]', 'property', 'og:url', `${origin}${seo.canonicalPath}`);
-    setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', seo.title);
-    setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', seo.description);
-
-    let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.rel = 'canonical';
-      document.head.appendChild(canonical);
-    }
-    canonical.href = `${origin}${seo.canonicalPath}`;
-
-    // Replace managed JSON-LD scripts
     document.head
-      .querySelectorAll('script[data-ft-schema="true"]')
+      .querySelectorAll('script[data-ft-schema="true"], link[rel="canonical"]:not([data-rh="true"])')
       .forEach((node) => node.remove());
-
-    for (const schema of seo.schemas) {
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.setAttribute('data-ft-schema', 'true');
-      script.textContent = JSON.stringify(schema);
-      document.head.appendChild(script);
-    }
-  }, [pathname]);
+  }, []);
 
   const navItems = [
     { label: 'Calculators', href: '/calculators/compound-interest' },
@@ -93,6 +59,22 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <Helmet>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:type" content={seo.ogType} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        <link rel="canonical" href={canonicalUrl} />
+        {seo.schemas.map((schema, idx) => (
+          <script key={idx} type="application/ld+json">
+            {JSON.stringify(schema)}
+          </script>
+        ))}
+      </Helmet>
       {/* Top Bar: strict 3-zone contract */}
       <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">

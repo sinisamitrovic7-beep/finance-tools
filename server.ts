@@ -2,19 +2,11 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { resolveRouteSeo } from './src/lib/seo.ts';
+import { injectSeoIntoHtml } from './src/lib/seoInject.ts';
 import { buildRobotsTxt, buildSitemapXml } from './src/lib/sitemap.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-function escapeAttr(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '<;')
-    .replace(/>/g, '>;');
-}
 
 function getBaseUrl(req: express.Request): string {
   if (process.env.SITE_URL) {
@@ -31,51 +23,6 @@ function getBaseUrl(req: express.Request): string {
   const proto = req.protocol || 'http';
   const host = req.headers.host || 'localhost:3000';
   return `${proto}://${host}`;
-}
-
-function injectSeoIntoHtml(html: string, reqPath: string, baseUrl: string): string {
-  const seo = resolveRouteSeo(reqPath, baseUrl);
-  const canonicalUrl = `${baseUrl}${seo.canonicalPath}`;
-  const safeTitle = escapeAttr(seo.title);
-  const safeDesc = escapeAttr(seo.description);
-
-  let out = html
-    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${safeTitle}</title>`)
-    .replace(
-      /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,
-      `<meta name="description" content="${safeDesc}" />`
-    )
-    .replace(
-      /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/i,
-      `<meta property="og:title" content="${safeTitle}" />`
-    )
-    .replace(
-      /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/i,
-      `<meta property="og:description" content="${safeDesc}" />`
-    )
-    .replace(
-      /<meta\s+property="og:type"\s+content="[^"]*"\s*\/?>/i,
-      `<meta property="og:type" content="${seo.ogType}" />`
-    )
-    .replace(
-      /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/i,
-      `<meta name="twitter:title" content="${safeTitle}" />`
-    )
-    .replace(
-      /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/i,
-      `<meta name="twitter:description" content="${safeDesc}" />`
-    );
-
-  const headExtras = [
-    `<link rel="canonical" href="${escapeAttr(canonicalUrl)}" />`,
-    `<meta property="og:url" content="${escapeAttr(canonicalUrl)}" />`,
-    ...seo.schemas.map(
-      (schema) =>
-        `<script type="application/ld+json" data-ft-schema="true">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`
-    ),
-  ].join('\n    ');
-
-  return out.replace('<!--SSR_HEAD_PLACEHOLDER-->', headExtras);
 }
 
 async function startServer() {
@@ -96,14 +43,17 @@ async function startServer() {
   });
 
   // Special route for /sitemap.xml BEFORE serving HTML pages
-app.get('/sitemap.xml', (req, res) => {
-  const baseUrl = getBaseUrl(req);
-
-  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-
-  return res.send(buildSitemapXml(baseUrl));
-});
+  app.get('/sitemap.xml', (req, res) => {
+    const baseUrl = getBaseUrl(req);
+    const sitemap = buildSitemapXml(baseUrl);
+    res
+      .status(200)
+      .set({
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+      })
+      .send(sitemap);
+  });
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
@@ -111,7 +61,7 @@ app.get('/sitemap.xml', (req, res) => {
       server: { middlewareMode: true },
       appType: 'custom',
     });
-    
+
     app.use(vite.middlewares);
 
     app.use('*', async (req, res, next) => {

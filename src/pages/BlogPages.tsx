@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowRight } from 'lucide-react';
 import { AdSlot } from '../components/AdSlot';
 import { AffiliateSection } from '../components/AffiliateSection';
@@ -7,10 +8,32 @@ import { ARTICLE_MAP, BLOG_ARTICLES } from '../data/blogArticles';
 import { CALCULATOR_MAP } from '../data/calculatorsMeta';
 import { CATEGORY_MAP } from '../data/categories';
 import { Link } from '../lib/router';
+import { resolveRouteSeo } from '../lib/seo';
 
 export function BlogIndexPage() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://finance.tools';
+  const seo = resolveRouteSeo('/blog', origin);
+  const canonicalUrl = `${origin}${seo.canonicalPath}`;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      <Helmet>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        {seo.schemas.map((schema, idx) => (
+          <script key={idx} type="application/ld+json">
+            {JSON.stringify(schema)}
+          </script>
+        ))}
+      </Helmet>
       <div className="max-w-3xl space-y-3">
         <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
           Finance.Tools Editorial Research
@@ -74,9 +97,34 @@ export function BlogArticlePage({ slug }: { slug: string }) {
 
   const calc = CALCULATOR_MAP[article.relatedCalculatorId];
   const category = CATEGORY_MAP[article.category];
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://finance.tools';
+  const seo = resolveRouteSeo(`/blog/${article.slug}`, origin);
+  const canonicalUrl = `${origin}/blog/${article.slug}`;
+  const ogImageUrl = `${origin}${article.imageUrl}`;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      <Helmet>
+        <title>{article.metaTitle}</title>
+        <meta name="description" content={article.metaDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={article.metaTitle} />
+        <meta property="og:description" content={article.metaDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="article:author" content={article.authorName} />
+        <meta property="article:section" content={category.name} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.metaTitle} />
+        <meta name="twitter:description" content={article.metaDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
+        {seo.schemas.map((schema, idx) => (
+          <script key={idx} type="application/ld+json">
+            {JSON.stringify(schema)}
+          </script>
+        ))}
+      </Helmet>
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2">
         <Link href="/" className="hover:text-slate-900 dark:hover:text-slate-200">

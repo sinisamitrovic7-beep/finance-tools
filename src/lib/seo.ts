@@ -9,6 +9,9 @@ export interface RouteSeoMetadata {
   description: string;
   canonicalPath: string;
   ogType: 'website' | 'article';
+  imageUrl?: string;
+  authorName?: string;
+  section?: string;
   schemas: Record<string, unknown>[];
 }
 
@@ -222,30 +225,52 @@ export function resolveRouteSeo(pathname: string, baseUrl = 'https://finance.too
     const art = ARTICLE_MAP[slug];
     if (art) {
       const cat = CATEGORY_MAP[art.category];
+      const articleUrl = `${baseUrl}/blog/${art.slug}`;
+      const absoluteImage = `${baseUrl}${art.imageUrl}`;
       return {
         title: art.metaTitle,
         description: art.metaDescription,
         canonicalPath: `/blog/${art.slug}`,
         ogType: 'article',
+        imageUrl: absoluteImage,
+        authorName: art.authorName,
+        section: cat.name,
         schemas: [
           {
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: art.title,
             description: art.metaDescription,
+            image: absoluteImage,
+            datePublished: '2026-11-01',
+            dateModified: '2026-11-25',
             author: { '@type': 'Person', name: art.authorName },
             publisher: { '@type': 'Organization', name: 'Finance.Tools' },
-            mainEntityOfPage: `${baseUrl}/blog/${art.slug}`,
+            mainEntityOfPage: articleUrl,
           },
           buildBreadcrumbSchema(baseUrl, [
             { name: 'Home', path: '/' },
-            { name: cat.shortName, path: `/${cat.slug}` },
+            { name: 'Guides', path: '/blog' },
             { name: art.title, path: `/blog/${art.slug}` },
           ]),
           buildFaqSchema(art.faqs),
         ],
       };
     }
+
+    return {
+      title: 'Personal Finance Guides & Wealth Research | Finance.Tools',
+      description:
+        'Read in-depth guides on compound interest, the FIRE movement, retirement readiness, renting vs buying a home, and high-ROI assets.',
+      canonicalPath: '/blog',
+      ogType: 'website',
+      schemas: [
+        buildBreadcrumbSchema(baseUrl, [
+          { name: 'Home', path: '/' },
+          { name: 'Guides', path: '/blog' },
+        ]),
+      ],
+    };
   }
 
   // Partners / Affiliate Directory

@@ -1,3 +1,4 @@
+import { injectSeoIntoHtml } from './src/lib/seoInject';
 import { buildRobotsTxt, buildSitemapXml } from './src/lib/sitemap';
 
 interface WorkerEnv {
@@ -7,12 +8,45 @@ interface WorkerEnv {
   SITE_URL?: string;
 }
 
+const STATIC_ASSET_EXTENSIONS = [
+  '.js',
+  '.mjs',
+  '.css',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.svg',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.json',
+  '.map',
+  '.webmanifest',
+];
+
+function isStaticAssetRequest(pathname: string): boolean {
+  if (pathname.startsWith('/assets/') || pathname.startsWith('/src/assets/')) {
+    return true;
+  }
+  const lower = pathname.toLowerCase();
+  return STATIC_ASSET_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
 export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
-    const baseUrl = env.SITE_URL || url.origin || 'https://finance-tools.sinisa-mitrovic7.workers.dev';
+    const baseUrl = (
+      env.SITE_URL ||
+      url.origin ||
+      'https://finance-tools.sinisa-mitrovic7.workers.dev'
+    ).replace(/\/+$/, '');
 
-    // Special route for /sitemap.xml BEFORE serving HTML pages
+    // 1. Dynamic XML Sitemap
     if (url.pathname === '/sitemap.xml') {
       const sitemap = buildSitemapXml(baseUrl);
       return new Response(sitemap, {
@@ -24,7 +58,7 @@ export default {
       });
     }
 
-    // Special route for /robots.txt BEFORE serving HTML pages
+    // 2. Dynamic Robots.txt
     if (url.pathname === '/robots.txt') {
       const robots = buildRobotsTxt(baseUrl);
       return new Response(robots, {
@@ -36,16 +70,33 @@ export default {
       });
     }
 
-    // Serve static assets or SPA HTML fallback
-    if (env.ASSETS) {
-      const assetResponse = await env.ASSETS.fetch(request);
-      if (assetResponse.status !== 404) {
-        return assetResponse;
-      }
-      const indexUrl = new URL('/index.html', url.origin);
-      return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
+    if (!env.ASSETS) {
+      return new Response('ASSETS binding is not configured.', { status: 500 });
     }
 
-    return new Response('Not Found', { status: 404 });
+    // 3. Static assets (JS, CSS, images, fonts, etc.) pass straight through
+    if (isStaticAssetRequest(url.pathname)) {
+      return env.ASSETS.fetch(request);
+    }
+
+    // 4. HTML page requests: read dist/index.html and inject per-route SEO metadata
+    const indexRequest = new Request(new URL('/index.html', url.origin).toString(), {
+      method: 'GET',
+    });
+    const indexResponse = await env.ASSETS.fetch(indexRequest);
+    if (!indexResponse.ok) {
+      return indexResponse;
+    }
+
+    const templateHtml = await indexResponse.text();
+    const modifiedHtml = injectSeoIntoHtml(templateHtml, url.pathname, baseUrl);
+
+    return new Response(modifiedHtml, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=0, must-revalidate',
+      },
+    });
   },
 };

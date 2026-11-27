@@ -1,4 +1,5 @@
 import React from 'react';
+import { HelmetProvider } from 'react-helmet-async';
 import { Layout } from './components/Layout';
 import { CATEGORY_MAP } from './data/categories';
 import { RouterProvider, useRouter } from './lib/router';
@@ -61,10 +62,12 @@ function PageView() {
 
 export default function App() {
   return (
-    <RouterProvider>
-      <Layout>
-        <PageView />
-      </Layout>
-    </RouterProvider>
+    <HelmetProvider>
+      <RouterProvider>
+        <Layout>
+          <PageView />
+        </Layout>
+      </RouterProvider>
+    </HelmetProvider>
   );
 }
